@@ -64,3 +64,7 @@ python3 -m unittest discover -s tests -p 'test_*.py'
 ## Ubuntu 服务器部署
 
 完整部署说明见 [DEPLOYMENT.md](DEPLOYMENT.md)。
+
+## 大模型对接
+
+千问 32B、Ollama、vLLM、OpenAI-compatible 服务的对接方式见 [MODEL_INTEGRATION.md](MODEL_INTEGRATION.md)。
