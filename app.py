@@ -252,7 +252,43 @@ def call_llm(prompt: str) -> str | None:
             data = json.loads(response.read().decode("utf-8"))
     except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, KeyError):
         return None
-    return data["choices"][0]["message"]["content"].strip()
+    return clean_llm_answer(data["choices"][0]["message"]["content"])
+
+
+def clean_llm_answer(text: str) -> str:
+    text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL | re.IGNORECASE)
+    return text.strip()
+
+
+def is_document_count_question(message: str) -> bool:
+    normalized = re.sub(r"\s+", "", message.lower())
+    count_terms = ("多少", "几条", "数量", "总数", "count")
+    target_terms = ("数据库", "文档", "记录", "资料", "数据")
+    return any(term in normalized for term in count_terms) and any(
+        term in normalized for term in target_terms
+    )
+
+
+def document_count_answer(db_path: Path = DB_PATH) -> dict[str, Any]:
+    init_db(db_path)
+    with connect(db_path) as conn:
+        count = conn.execute("SELECT COUNT(*) FROM documents").fetchone()[0]
+    return {
+        "answer": (
+            f"当前 SQLite 数据库的 documents 表共有 {count} 条记录。\n\n"
+            "依据：直接执行 SQL `SELECT COUNT(*) FROM documents` 得到该结果。"
+        ),
+        "citations": [
+            {
+                "id": "sql-count-documents",
+                "title": "SQLite 统计查询",
+                "source": "data/knowledge.db",
+                "excerpt": "SELECT COUNT(*) FROM documents",
+                "score": 0,
+            }
+        ],
+        "used_llm": False,
+    }
 
 
 def fallback_answer(message: str, citations: list[dict[str, Any]]) -> str:
@@ -267,6 +303,8 @@ def fallback_answer(message: str, citations: list[dict[str, Any]]) -> str:
 
 def answer(message: str, history: list[dict[str, str]] | None = None) -> dict[str, Any]:
     history = history or []
+    if is_document_count_question(message):
+        return document_count_answer()
     citations = retrieve(message)
     prompt = build_prompt(message, citations, history)
     llm_answer = call_llm(prompt)
