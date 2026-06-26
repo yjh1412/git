@@ -35,11 +35,12 @@ python3 app.py --seed
 
 如果使用其他 OpenAI-compatible 服务，修改 `LLM_BASE_URL` 和 `LLM_MODEL` 即可。
 
-MiniMax-M3 本地服务示例：
+MiniMax-M3 官方平台 API 示例：
 
 ```bash
-export LLM_BASE_URL="http://127.0.0.1:8001/v1"
-export LLM_MODEL="minimax-m3"
+export LLM_API_KEY="你的 MiniMax API key"
+export LLM_BASE_URL="https://api.minimaxi.com/v1"
+export LLM_MODEL="MiniMax-M3"
 python3 app.py --seed
 ```
 

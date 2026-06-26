@@ -27,11 +27,64 @@ model = os.getenv("LLM_MODEL", "gpt-4o-mini")
 
 ## 2. 接入 MiniMax-M3
 
-MiniMax-M3 推荐作为本地模型服务运行，并通过 OpenAI-compatible API 暴露给本项目。这样不需要为 MiniMax 单独写一套调用代码。
+MiniMax 官方平台提供 OpenAI-compatible API，本项目可以直接调用，不需要为 MiniMax 单独写一套调用代码。
 
-### 2.1 启动 MiniMax-M3 OpenAI-compatible 服务
+### 2.1 使用 MiniMax 官方平台 API
 
-如果你的服务器已经部署好了 MiniMax-M3，只需要确认它能提供类似接口：
+在本项目的环境变量中配置：
+
+```bash
+LLM_API_KEY=你的MiniMax API key
+LLM_BASE_URL=https://api.minimaxi.com/v1
+LLM_MODEL=MiniMax-M3
+```
+
+项目会请求：
+
+```text
+https://api.minimaxi.com/v1/chat/completions
+```
+
+如果部署在服务器上，写入：
+
+```bash
+sudo nano /etc/sqlite-grounded-qa.env
+```
+
+```bash
+APP_HOST=127.0.0.1
+APP_PORT=8000
+LLM_API_KEY=你的MiniMax API key
+LLM_BASE_URL=https://api.minimaxi.com/v1
+LLM_MODEL=MiniMax-M3
+```
+
+然后重启：
+
+```bash
+sudo systemctl restart sqlite-grounded-qa
+```
+
+### 2.2 测试 MiniMax 官方接口
+
+```bash
+curl https://api.minimaxi.com/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $LLM_API_KEY" \
+  -d '{
+    "model": "MiniMax-M3",
+    "messages": [
+      {"role": "user", "content": "用一句话介绍你自己"}
+    ],
+    "temperature": 0.2
+  }'
+```
+
+能返回 `choices[0].message.content`，说明 MiniMax-M3 可以被本项目直接调用。
+
+### 2.3 本地部署 MiniMax-M3
+
+如果你的服务器已经本地部署好了 MiniMax-M3，只需要确认它能提供类似接口：
 
 ```text
 http://127.0.0.1:8001/v1/chat/completions
@@ -44,25 +97,25 @@ source /opt/vllm-venv/bin/activate
 vllm serve /models/MiniMax-M3 \
   --host 127.0.0.1 \
   --port 8001 \
-  --served-model-name minimax-m3
+  --served-model-name MiniMax-M3
 ```
 
 如果模型服务已经由其他团队部署，只要拿到三项信息即可：
 
 ```text
 base_url: http://模型服务地址/v1
-model: 模型名称，例如 minimax-m3
+model: 模型名称，例如 MiniMax-M3
 api_key: 如果本地服务不校验，可用 local
 ```
 
-### 2.2 测试 MiniMax-M3 接口
+### 2.4 测试本地 MiniMax-M3 接口
 
 ```bash
 curl http://127.0.0.1:8001/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer local" \
   -d '{
-    "model": "minimax-m3",
+    "model": "MiniMax-M3",
     "messages": [
       {"role": "user", "content": "用一句话介绍你自己"}
     ],
@@ -72,7 +125,7 @@ curl http://127.0.0.1:8001/v1/chat/completions \
 
 能返回 `choices[0].message.content`，说明 MiniMax-M3 可以被本项目直接调用。
 
-### 2.3 配置本项目使用 MiniMax-M3
+### 2.5 配置本项目使用本地 MiniMax-M3
 
 编辑：
 
@@ -87,7 +140,7 @@ APP_HOST=127.0.0.1
 APP_PORT=8000
 LLM_API_KEY=local
 LLM_BASE_URL=http://127.0.0.1:8001/v1
-LLM_MODEL=minimax-m3
+LLM_MODEL=MiniMax-M3
 ```
 
 重启项目：
@@ -275,7 +328,12 @@ LLM_MODEL=qwen32b
 # 本地 MiniMax-M3
 LLM_API_KEY=local
 LLM_BASE_URL=http://127.0.0.1:8001/v1
-LLM_MODEL=minimax-m3
+LLM_MODEL=MiniMax-M3
+
+# MiniMax 官方平台
+LLM_API_KEY=MiniMax平台API_KEY
+LLM_BASE_URL=https://api.minimaxi.com/v1
+LLM_MODEL=MiniMax-M3
 
 # Ollama
 LLM_API_KEY=ollama
@@ -335,7 +393,7 @@ User=qaapp
 Group=qaapp
 WorkingDirectory=/opt/sqlite-grounded-qa
 Environment=CUDA_VISIBLE_DEVICES=0
-ExecStart=/opt/vllm-venv/bin/vllm serve /models/MiniMax-M3 --host 127.0.0.1 --port 8001 --served-model-name minimax-m3
+ExecStart=/opt/vllm-venv/bin/vllm serve /models/MiniMax-M3 --host 127.0.0.1 --port 8001 --served-model-name MiniMax-M3
 Restart=always
 RestartSec=5
 
