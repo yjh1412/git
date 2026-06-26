@@ -35,6 +35,14 @@ python3 app.py --seed
 
 如果使用其他 OpenAI-compatible 服务，修改 `LLM_BASE_URL` 和 `LLM_MODEL` 即可。
 
+MiniMax-M3 本地服务示例：
+
+```bash
+export LLM_BASE_URL="http://127.0.0.1:8001/v1"
+export LLM_MODEL="minimax-m3"
+python3 app.py --seed
+```
+
 ## 数据库
 
 默认数据库文件：
@@ -67,4 +75,4 @@ python3 -m unittest discover -s tests -p 'test_*.py'
 
 ## 大模型对接
 
-千问 32B、Ollama、vLLM、OpenAI-compatible 服务的对接方式见 [MODEL_INTEGRATION.md](MODEL_INTEGRATION.md)。
+MiniMax-M3、千问 32B、Ollama、vLLM、OpenAI-compatible 服务的对接方式见 [MODEL_INTEGRATION.md](MODEL_INTEGRATION.md)。

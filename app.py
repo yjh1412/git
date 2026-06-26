@@ -219,11 +219,14 @@ def build_prompt(message: str, citations: list[dict[str, Any]], history: list[di
 
 
 def call_llm(prompt: str) -> str | None:
-    api_key = os.getenv("LLM_API_KEY") or os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        return None
     base_url = os.getenv("LLM_BASE_URL", "https://api.openai.com/v1").rstrip("/")
     model = os.getenv("LLM_MODEL", "gpt-4o-mini")
+    api_key = os.getenv("LLM_API_KEY") or os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        if base_url.startswith(("http://127.0.0.1", "http://localhost")):
+            api_key = "local"
+        else:
+            return None
     payload = {
         "model": model,
         "messages": [

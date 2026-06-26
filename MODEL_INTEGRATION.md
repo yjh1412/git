@@ -1,6 +1,6 @@
 # 大模型对接方案
 
-本文档说明如何用最少代码改动对接服务器上的千问 32B，并为以后切换其他模型保留统一方案。
+本文档说明如何用最少代码改动对接服务器上的 MiniMax-M3、千问 32B 等模型，并为以后切换其他模型保留统一方案。
 
 ## 1. 推荐原则
 
@@ -25,11 +25,84 @@ base_url = os.getenv("LLM_BASE_URL", "https://api.openai.com/v1")
 model = os.getenv("LLM_MODEL", "gpt-4o-mini")
 ```
 
-## 2. 最推荐：vLLM 部署千问 32B
+## 2. 接入 MiniMax-M3
+
+MiniMax-M3 推荐作为本地模型服务运行，并通过 OpenAI-compatible API 暴露给本项目。这样不需要为 MiniMax 单独写一套调用代码。
+
+### 2.1 启动 MiniMax-M3 OpenAI-compatible 服务
+
+如果你的服务器已经部署好了 MiniMax-M3，只需要确认它能提供类似接口：
+
+```text
+http://127.0.0.1:8001/v1/chat/completions
+```
+
+如果使用 vLLM，并且模型在本地路径 `/models/MiniMax-M3`，可以按下面方式启动：
+
+```bash
+source /opt/vllm-venv/bin/activate
+vllm serve /models/MiniMax-M3 \
+  --host 127.0.0.1 \
+  --port 8001 \
+  --served-model-name minimax-m3
+```
+
+如果模型服务已经由其他团队部署，只要拿到三项信息即可：
+
+```text
+base_url: http://模型服务地址/v1
+model: 模型名称，例如 minimax-m3
+api_key: 如果本地服务不校验，可用 local
+```
+
+### 2.2 测试 MiniMax-M3 接口
+
+```bash
+curl http://127.0.0.1:8001/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer local" \
+  -d '{
+    "model": "minimax-m3",
+    "messages": [
+      {"role": "user", "content": "用一句话介绍你自己"}
+    ],
+    "temperature": 0.2
+  }'
+```
+
+能返回 `choices[0].message.content`，说明 MiniMax-M3 可以被本项目直接调用。
+
+### 2.3 配置本项目使用 MiniMax-M3
+
+编辑：
+
+```bash
+sudo nano /etc/sqlite-grounded-qa.env
+```
+
+写入：
+
+```bash
+APP_HOST=127.0.0.1
+APP_PORT=8000
+LLM_API_KEY=local
+LLM_BASE_URL=http://127.0.0.1:8001/v1
+LLM_MODEL=minimax-m3
+```
+
+重启项目：
+
+```bash
+sudo systemctl restart sqlite-grounded-qa
+```
+
+本项目现在对本地 `127.0.0.1` / `localhost` 模型服务做了容错：如果忘记设置 `LLM_API_KEY`，会自动使用 `local` 作为占位 token。生产环境对公网模型服务仍然应该配置真实 key。
+
+## 3. vLLM 部署千问 32B
 
 如果服务器有 NVIDIA GPU，推荐用 vLLM。vLLM 原生提供 OpenAI-compatible API，和本项目最匹配。
 
-### 2.1 安装 vLLM
+### 3.1 安装 vLLM
 
 建议先创建 Python 虚拟环境：
 
@@ -40,7 +113,7 @@ pip install --upgrade pip
 pip install vllm
 ```
 
-### 2.2 启动 Qwen 32B
+### 3.2 启动 Qwen 32B
 
 示例一：使用 Hugging Face 模型名：
 
@@ -80,7 +153,7 @@ vllm serve /models/Qwen2.5-32B-Instruct \
   --tensor-parallel-size 2
 ```
 
-### 2.3 测试 vLLM 接口
+### 3.3 测试 vLLM 接口
 
 ```bash
 curl http://127.0.0.1:8001/v1/chat/completions \
@@ -97,7 +170,7 @@ curl http://127.0.0.1:8001/v1/chat/completions \
 
 能返回 `choices[0].message.content` 即可对接本项目。
 
-### 2.4 配置本项目
+### 3.4 配置本项目
 
 编辑：
 
@@ -127,11 +200,11 @@ sudo systemctl restart sqlite-grounded-qa
 sudo journalctl -u sqlite-grounded-qa -f
 ```
 
-## 3. 使用 Ollama 对接千问
+## 4. 使用 Ollama 对接千问
 
 如果服务器用 Ollama 管理模型，也可以对接。Ollama 提供 OpenAI-compatible API。
 
-### 3.1 安装并启动模型
+### 4.1 安装并启动模型
 
 ```bash
 curl -fsSL https://ollama.com/install.sh | sh
@@ -151,7 +224,7 @@ OpenAI-compatible base URL 为：
 http://127.0.0.1:11434/v1
 ```
 
-### 3.2 配置本项目
+### 4.2 配置本项目
 
 ```bash
 APP_HOST=127.0.0.1
@@ -167,7 +240,7 @@ LLM_MODEL=qwen2.5:32b
 sudo systemctl restart sqlite-grounded-qa
 ```
 
-## 4. 使用 DashScope / 阿里云百炼
+## 5. 使用 DashScope / 阿里云百炼
 
 如果不在本机跑模型，而是使用阿里云百炼的兼容 OpenAI 接口，配置类似：
 
@@ -181,7 +254,7 @@ LLM_MODEL=qwen-plus
 
 具体模型名以服务商控制台为准。
 
-## 5. 以后切换其他模型
+## 6. 以后切换其他模型
 
 只要新模型服务兼容 OpenAI Chat Completions API，就只改这三项：
 
@@ -198,6 +271,11 @@ LLM_MODEL=...
 LLM_API_KEY=local
 LLM_BASE_URL=http://127.0.0.1:8001/v1
 LLM_MODEL=qwen32b
+
+# 本地 MiniMax-M3
+LLM_API_KEY=local
+LLM_BASE_URL=http://127.0.0.1:8001/v1
+LLM_MODEL=minimax-m3
 
 # Ollama
 LLM_API_KEY=ollama
@@ -217,7 +295,7 @@ LLM_MODEL=服务商模型名
 
 业务代码不用改。
 
-## 6. 推荐的生产架构
+## 7. 推荐的生产架构
 
 ```text
 浏览器
@@ -238,7 +316,43 @@ OpenAI-compatible LLM
 
 推荐只让 Nginx 对公网开放。SQLite QA 服务和大模型服务都监听 `127.0.0.1`，避免直接暴露到公网。
 
-## 7. systemd 管理 vLLM
+## 8. systemd 管理 vLLM
+
+MiniMax-M3 示例：
+
+```bash
+sudo nano /etc/systemd/system/minimax-m3-vllm.service
+```
+
+```ini
+[Unit]
+Description=MiniMax-M3 vLLM OpenAI API
+After=network.target
+
+[Service]
+Type=simple
+User=qaapp
+Group=qaapp
+WorkingDirectory=/opt/sqlite-grounded-qa
+Environment=CUDA_VISIBLE_DEVICES=0
+ExecStart=/opt/vllm-venv/bin/vllm serve /models/MiniMax-M3 --host 127.0.0.1 --port 8001 --served-model-name minimax-m3
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
+启动：
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable minimax-m3-vllm
+sudo systemctl start minimax-m3-vllm
+sudo journalctl -u minimax-m3-vllm -f
+```
+
+千问 32B 示例：
 
 创建：
 
@@ -282,7 +396,7 @@ sudo journalctl -u qwen32b-vllm -f
 sudo systemctl restart sqlite-grounded-qa
 ```
 
-## 8. 如何确认已经用上大模型
+## 9. 如何确认已经用上大模型
 
 在页面提问后，如果后端成功调用大模型，接口返回：
 
@@ -310,7 +424,7 @@ curl -s -X POST http://127.0.0.1:8000/api/chat \
   -d '{"message":"P0故障多久响应？"}'
 ```
 
-## 9. 排查顺序
+## 10. 排查顺序
 
 1. 大模型服务是否能直接访问：
 
@@ -339,4 +453,3 @@ sudo journalctl -u sqlite-grounded-qa -n 100
 ```
 
 5. 不要把大模型服务直接暴露到公网，除非额外加鉴权、限流和 HTTPS。
-
