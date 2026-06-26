@@ -60,3 +60,7 @@ CREATE TABLE documents (
 ```bash
 python3 -m unittest discover -s tests -p 'test_*.py'
 ```
+
+## Ubuntu 服务器部署
+
+完整部署说明见 [DEPLOYMENT.md](DEPLOYMENT.md)。
