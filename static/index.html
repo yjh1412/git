@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SQLite Grounded QA</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="workspace">
+        <header class="topbar">
+          <div>
+            <h1>SQLite Grounded QA</h1>
+            <p>自然语言提问，基于 SQLite 原文检索并汇总回答。</p>
+          </div>
+          <button id="refreshDocs" type="button">刷新文档</button>
+        </header>
+
+        <section id="chat" class="chat" aria-live="polite"></section>
+
+        <form id="chatForm" class="composer">
+          <textarea
+            id="message"
+            name="message"
+            rows="3"
+            placeholder="例如：P0 故障多久响应？报销超过 5000 元需要谁审批？"
+            required
+          ></textarea>
+          <button type="submit">发送</button>
+        </form>
+      </section>
+
+      <aside class="side">
+        <section class="panel">
+          <h2>添加数据库文档</h2>
+          <form id="docForm" class="doc-form">
+            <input id="docTitle" placeholder="标题" required />
+            <input id="docSource" placeholder="来源，例如 internal://policy/a" />
+            <textarea id="docContent" rows="8" placeholder="原文内容" required></textarea>
+            <button type="submit">写入 SQLite</button>
+          </form>
+        </section>
+
+        <section class="panel">
+          <h2>当前文档</h2>
+          <div id="docs" class="docs"></div>
+        </section>
+      </aside>
+    </main>
+    <script src="/app.js"></script>
+  </body>
+</html>
+
